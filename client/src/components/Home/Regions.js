@@ -2,7 +2,7 @@ import { useMutation, useQuery } from '@apollo/client';
 import React, { useEffect, useState } from 'react';
 import { Button } from 'react-bootstrap';
 import { WButton, WCol, WRow } from 'wt-frontend';
-import { ADD_REGION, DELETE_REGION, REGISTER } from '../../cache/mutations';
+import { ADD_REGION, DELETE_REGION, EDIT_REGION, REGISTER } from '../../cache/mutations';
 import { GET_ALL_REGIONS, GET_ALL_REGIONS_OF_ANCESTOR } from '../../cache/queries';
 import { regions } from '../../MockData/Datas'
 import RegionViewer from './RegionViewer';
@@ -15,7 +15,8 @@ const Regions = (props) => {
     const [valBackBread, setValBackBread] = useState(null);
     const [breadCrum, setBreadCrum] = useState([]);
     const [resentViewer, setResentViewer] = useState(false);
-
+    const [pre_regions, setPreRegions] = useState([]);
+    const [next_regions, setNextRegions] = useState([]);
     const [addRegions, setAddRegions] = useState({
         name: '',
         capital: '',
@@ -31,23 +32,24 @@ const Regions = (props) => {
             capital: '',
             leader: '',
             flag: '',
-
         })
         setLandmark([]);
     }
     const { data, refetch: refreshRegions } = useQuery(GET_ALL_REGIONS, { variables: { mapId: localStorage.getItem('map_id') } })
 
     useEffect(async () => {
-        console.log(localStorage.getItem('map_id'));
         await refreshRegions()
         if (data) {
-            console.log(data);
             if (data.getAllRegions.length > 0) {
                 setRegions(data.getAllRegions)
             } else {
             }
         }
     }, [data, localStorage.getItem('map_id')])
+
+    useEffect(() => {
+
+    }, [addLine])
     const updateInput = (e) => {
         let landmark = [];
         const { name, value } = e.target;
@@ -74,13 +76,14 @@ const Regions = (props) => {
 
     const handleSaveRegions = async () => {
 
-        if (addRegions?.name.length > 3 && addRegions?.capital.length > 3 && addRegions?.leader.length > 3) {
+        if (addRegions?.name.length > 3) {
             const dataSending = {
                 ...addRegions,
                 landmarks: landmark,
                 ancestorRegion: localStorage.getItem("map_id")
             }
-            console.log(dataSending);
+            setPreRegions(regions)
+
             const { data: regionsSaved } = await savedRegion({
                 variables: { ...dataSending }
             });
@@ -89,16 +92,18 @@ const Regions = (props) => {
                 resetAddRegionData()
                 await refreshRegions();
                 alert('Saved')
-                console.log(regionsSaved);
+
             } else {
                 alert('falured')
             }
         } else {
-            alert('Enter the name, capital and leader of the region');
+            alert('Name must has more than 3 characters');
         }
     }
     const [deleteRegions] = useMutation(DELETE_REGION);
     const handleDeleRegions = async (value) => {
+
+        setPreRegions(regions)
         const { data: deletedRegions } = await deleteRegions({
             variables: { _id: value._id }
         });
@@ -112,13 +117,71 @@ const Regions = (props) => {
     const { data: subregionByAncestor, refetch: getSubregionByAncestor } = useQuery(GET_ALL_REGIONS_OF_ANCESTOR)
     const handleNextRegions = async (value) => {
         localStorage.setItem('map_id', value._id);
-        localStorage.setItem('breadCrumID', localStorage.getItem('breadCrumID') + "," + value._id);
-        localStorage.setItem('map_name', localStorage.getItem('map_name') + "," + value.name);
-        console.log(localStorage.getItem('map_id'));
+        if (localStorage.getItem('breadCrumID') == null || localStorage.getItem('breadCrumID') == "") {
+            localStorage.setItem('breadCrumID', value._id);
+        } else {
+            localStorage.setItem('breadCrumID', localStorage.getItem('breadCrumID') + "," + value._id);
+        }
+        if (localStorage.getItem('map_name') == null || localStorage.getItem('map_name') == "") {
+            localStorage.setItem('map_name', value.name);
+        } else {
+            localStorage.setItem('map_name', localStorage.getItem('map_name') + "," + value.name);
+        }
         await getSubregionByAncestor({ variables: { ancestorRegion: localStorage.getItem('map_id') } })
         if (subregionByAncestor) {
-            console.log(subregionByAncestor.getAllSubRegions);
             setRegions(subregionByAncestor.getAllSubRegions);
+        }
+    }
+    const handleUndo = async () => {
+        if (pre_regions == null) {
+            return
+        }
+        setNextRegions(regions)
+        if (regions.length > pre_regions.length) {
+            for (let index = 0; index < regions.length; index++) {
+                const region = regions[index];
+                let kt = false
+                for (let index2 = 0; index2 < pre_regions.length; index2++) {
+                    const pre_region = pre_regions[index2];
+                    if (region._id == pre_region._id) {
+                        kt = true;
+                        break;
+                    }
+                }
+                if (!kt) {
+                    await handleDeleRegions(regions[index])
+                    break
+                }
+            }
+        } else if (regions.length < pre_regions.length) {
+            for (let index = 0; index < pre_regions.length; index++) {
+                const pre_region = pre_regions[index];
+                let kt = false
+                for (let index2 = 0; index2 < regions.length; index2++) {
+                    const region = regions[index2];
+                    if (region._id == pre_region._id) {
+                        kt = true;
+                        break;
+                    }
+                }
+                if (!kt) {
+
+                    setAddRegions({
+                        name: pre_regions[index].name,
+                        capital: pre_regions[index].capital,
+                        leader: pre_regions[index].leader,
+                        flag: pre_regions[index].flag,
+                    })
+
+                    setLandmark(pre_regions[index].landmarks)
+                    if(addRegions.name!=""){
+                    await handleSaveRegions()
+                 } else {
+                        
+                    }
+                    break
+                }
+            }
         }
     }
 
@@ -141,17 +204,14 @@ const Regions = (props) => {
 
     useEffect(() => {
         if (backBreadCrumData) {
-            console.log(backBreadCrumData);
             if (backBreadCrumData.getAllRegions.length > 0) {
                 setRegions(backBreadCrumData.getAllRegions)
-            } else {
             }
         }
     }, [backBreadCrumData, regions])
     const handleBreadCrum = async (val, key) => {
         let breadCrums = [];
         if (key != 0) {
-            console.log(val, key);
             setValBackBread(val.id)
             localStorage.setItem('breadCrumID', '')
             localStorage.setItem('map_name', '')
@@ -159,7 +219,6 @@ const Regions = (props) => {
             let nameLocal = '';
             for (let index = 0; index < key + 1; index++) {
                 const element = breadCrum[index];
-                console.log("ele", element);
                 const id = element.id;
                 const name = element.name
                 idLocal = idLocal + id;
@@ -180,7 +239,6 @@ const Regions = (props) => {
         } else {
             localStorage.setItem('map', val.id)
             props.setShowMapSelect()
-
         }
     }
     useEffect(() => {
@@ -189,9 +247,16 @@ const Regions = (props) => {
         let breadCrums = breadCrum;
         let mapID = localStorage.getItem('breadCrumID').split(",");
         let mapName = localStorage.getItem('map_name').split(",");
-        localStorage.setItem('breadCrumID', +"," + localStorage.getItem('breadCrumID') + "," + mapID[mapID.length - 1]);
-        localStorage.setItem('map_name', localStorage.getItem('map_name') + "," + mapName[mapName.length - 1]);
-        // localStorage.setItem('map_name', + "," + value.name);
+        if (localStorage.getItem('breadCrumID') == null || localStorage.getItem('breadCrumID') == "") {
+            localStorage.setItem('breadCrumID', value._id);
+        } else {
+            localStorage.setItem('breadCrumID', localStorage.getItem('breadCrumID') + "," + value._id);
+        }
+        if (localStorage.getItem('map_name') == null || localStorage.getItem('map_name') == "") {
+            localStorage.setItem('map_name', value.name);
+        } else {
+            localStorage.setItem('map_name', localStorage.getItem('map_name') + "," + value.name);
+        }
         const addToBread = {
             id: mapID[mapID.length - 1],
             name: mapName[mapName.length - 1]
@@ -210,7 +275,10 @@ const Regions = (props) => {
     const showListRegion = () => {
         setDetail(false)
         setResentViewer(false);
-
+    }
+    const [editRegion] = useMutation(EDIT_REGION);
+    const handleEditRegions = async (value) => {
+        alert(value.name + "" + value.capital);
     }
     return (
         <div className="signup-modal">
@@ -267,10 +335,15 @@ const Regions = (props) => {
 
                 />
             ) : (
-                <>
-                    <Button><i className="fas fa-plus" onClick={() => {
-                        openAddRegionsLine()
-                    }}></i></Button>
+                <>  <WRow>
+                    <Button onClick={() => { openAddRegionsLine() }}>
+                        <i className="fas fa-plus" ></i></Button>
+                    <Button onClick={() => { handleUndo() }}>
+                        <i className="fas fa-undo" ></i></Button>
+                    <Button onClick={() => { handleUndo() }}
+                    ><i className="fas fa-redo" ></i></Button>
+                </WRow>
+
                     <WRow className="wrap-table-content-title">
                         <WCol size='1' className='wrap-item-title' ></WCol>
                         <WCol size='2' className='wrap-item-title' >Name  {'\u2193'}</WCol>
@@ -288,6 +361,7 @@ const Regions = (props) => {
                                 <WRow key={key} className='wrap-table-content'>
                                     <WCol size='1' className='wrap-item-region'>
                                         <Button style={{ background: 'rgb(255 255 255 / 14%)' }} onClick={() => { handleDeleRegions(value) }}> X </Button>
+
                                     </WCol>
                                     <WCol size='2' className='wrap-item-region' onClick={() => { handleNextRegions(value) }}>
                                         {value.name}
