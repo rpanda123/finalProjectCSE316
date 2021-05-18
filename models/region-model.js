@@ -10,7 +10,8 @@ const regionSchema = new Schema(
 			type: Number
 		},
 		name: {
-			type: String
+			type: String,
+			required: true
 		},
 		capital: {
 			type: String
