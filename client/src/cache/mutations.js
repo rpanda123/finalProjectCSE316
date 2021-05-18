@@ -62,10 +62,9 @@ export const ADD_REGION = gql`
 `;
 
 export const EDIT_REGION = gql`
-	mutation editRegion($_id: String, $id: Int, $name: String, $capital: String, $leader: String, $flag: String, $landmarks: [String], $ancestorRegion: String) {
-		editRegion(_id: $_id, id: $id, name: $name, capital: $capital, leader: $leader, flag: $flag, landmarks: $landmarks, ancestorRegion: $ancestorRegion) {
+	mutation editRegion($_id: String!,  $name: String!, $capital: String, $leader: String, $flag: String, $landmarks: [String], $ancestorRegion: String) {
+		editRegion(_id: $_id, name: $name, capital: $capital, leader: $leader, flag: $flag, landmarks: $landmarks, ancestorRegion: $ancestorRegion) {
 			_id
-			id
 			name
 			capital
 			leader
