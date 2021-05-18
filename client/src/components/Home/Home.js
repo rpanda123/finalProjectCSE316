@@ -8,7 +8,6 @@ import MapSelect from './MapSelect';
 import Regions from './Regions';
 import { useQuery } from '@apollo/client';
 import { GET_DB_USER, GET_MAP } from '../../cache/queries';
-import MapForm from './MapForm';
 import RegionViewer from './RegionViewer';
 const Home = (props) => {
     const [showInfo, setToggeInfo] = useState(false)
@@ -74,7 +73,6 @@ const Home = (props) => {
        await getGetCurrentUser()
        if (data) {
         setName(data.getCurrentUser.name)
-        console.log(99999999,name)
         localStorage.setItem('name', data.getCurrentUser.name)
     }
      }, [data, name])
