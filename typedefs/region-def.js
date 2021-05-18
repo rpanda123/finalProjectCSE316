@@ -1,7 +1,7 @@
 const { gql } = require('apollo-server');
 
 
-const typeDefs = gql `
+const typeDefs = gql`
 	type Region {
 		_id: String
 		name: String
@@ -29,7 +29,13 @@ const typeDefs = gql `
 			flag: String,
 			landmarks: [String],
 			ancestorRegion: String): Region
-		editRegion(_id: String!, newRegion: RegionInput!): Region
+		editRegion(_id: String!, 
+			name: String!,
+			capital:String,
+			leader:String,
+			flag:String,
+			landmarks:[String],
+			ancestorRegion:String): Region
 		deleteRegion(_id: String!): Boolean
 		moveRegion(_id: String!, newAncestor: String!): Region
 		addLandmark(_id: String!, landmarkName: String): [String]
